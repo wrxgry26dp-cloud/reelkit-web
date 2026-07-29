@@ -2,7 +2,7 @@
 const client = useSupabaseClient()
 const { t } = useI18n()
 const { open, hideLogin, redirect } = useLoginModal()
-const step = ref<'menu' | 'email' | 'otp'>('menu')
+const step = ref<'email' | 'otp'>('email')
 const email = ref('')
 const loading = ref(false)
 const message = ref('')
@@ -15,12 +15,13 @@ const inputRefs = ref<Array<HTMLInputElement | null>>([])
 const cooldown = ref(0)
 let timer: ReturnType<typeof setInterval> | null = null
 
+const canContinue = computed(() => /.+@.+\..+/.test(email.value.trim()))
 const codeComplete = computed(() => digits.value.every(d => d.length === 1))
 const token = computed(() => digits.value.join(''))
 
 watch(open, (v) => {
   if (v) {
-    step.value = 'menu'
+    step.value = 'email'
     message.value = ''
     email.value = ''
     resetDigits()
@@ -57,9 +58,11 @@ function stopCooldown() {
 
 async function sendOtp(isResend = false) {
   if (loading.value) return
+  if (!isResend && !canContinue.value) return
   if (isResend && cooldown.value > 0) return
   loading.value = true
   message.value = ''
+  // shouldCreateUser: true → first OTP both registers and signs in
   const { error } = await client.auth.signInWithOtp({
     email: email.value.trim(),
     options: {
@@ -106,6 +109,29 @@ function onPaste(event: ClipboardEvent) {
   if (codeComplete.value) verifyOtp()
 }
 
+async function ensureProfile(userId: string) {
+  const { data: profile } = await client
+    .from('profiles')
+    .select('id, client_source')
+    .eq('id', userId)
+    .maybeSingle()
+
+  if (!profile) {
+    await client.from('profiles').insert({
+      id: userId,
+      client_source: clientSource,
+      is_customer: true,
+    })
+    return
+  }
+  if (!profile.client_source) {
+    await client.from('profiles').update({
+      client_source: clientSource,
+      is_customer: true,
+    }).eq('id', userId)
+  }
+}
+
 async function verifyOtp() {
   if (!codeComplete.value || loading.value) return
   loading.value = true
@@ -122,12 +148,7 @@ async function verifyOtp() {
   }
   await client.auth.getSession()
   const user = useSupabaseUser()
-  if (user.value) {
-    await client.from('profiles').update({
-      client_source: clientSource,
-      is_customer: true,
-    }).eq('id', user.value.id).is('client_source', null)
-  }
+  if (user.value?.id) await ensureProfile(user.value.id)
   loading.value = false
   hideLogin()
   await navigateTo(redirect.value || '/')
@@ -145,26 +166,26 @@ async function verifyOtp() {
       </div>
       <div class="modal-body">
         <div class="row" style="display:flex; justify-content:space-between; align-items:center;">
-          <h2 style="margin:0;">{{ t('signIn') }} ReelKit</h2>
-          <button class="btn secondary" @click="hideLogin">×</button>
+          <h2 style="margin:0;">{{ t('signIn') }}</h2>
+          <button class="btn secondary" type="button" @click="hideLogin">×</button>
         </div>
 
-        <template v-if="step === 'menu'">
-          <button class="social" disabled>Google</button>
-          <button class="social" disabled>Facebook</button>
-          <button class="social" disabled>Apple</button>
-          <button class="social" disabled>TikTok</button>
-          <div class="divider"><span>{{ t('or') }}</span></div>
-          <button class="btn" @click="step = 'email'">{{ t('emailLogin') }}</button>
-          <p class="muted" style="font-size:12px;">{{ t('continueAgree') }}</p>
-        </template>
-
-        <template v-else-if="step === 'email'">
-          <input v-model="email" class="input" type="email" placeholder="Email" @keyup.enter="sendOtp(false)">
-          <button class="btn" :disabled="loading || !email" @click="sendOtp(false)">
-            {{ loading ? '...' : t('sendCode') }}
+        <template v-if="step === 'email'">
+          <p class="muted" style="margin:0; font-size:13px; line-height:1.45;">{{ t('authHint') }}</p>
+          <label class="muted" style="font-size:12px;">{{ t('emailLogin') }}</label>
+          <input
+            v-model="email"
+            class="input"
+            type="email"
+            autocomplete="email"
+            :placeholder="t('emailPlaceholder')"
+            :disabled="loading"
+            @keyup.enter="sendOtp(false)"
+          >
+          <button class="btn" type="button" :disabled="loading || !canContinue" @click="sendOtp(false)">
+            {{ loading ? '...' : t('continue') }}
           </button>
-          <button class="btn secondary" @click="step = 'menu'">{{ t('back') }}</button>
+          <p class="muted" style="font-size:12px; margin:0;">{{ t('continueAgree') }}</p>
         </template>
 
         <template v-else>
@@ -187,8 +208,8 @@ async function verifyOtp() {
               @keydown="onKeydown($event, index)"
             >
           </div>
-          <button class="btn" :disabled="loading || !codeComplete" @click="verifyOtp">
-            {{ loading ? '...' : t('verify') }}
+          <button class="btn" type="button" :disabled="loading || !codeComplete" @click="verifyOtp">
+            {{ loading ? '...' : t('continue') }}
           </button>
           <p class="muted" style="margin:0; font-size:13px; text-align:center;">
             {{ t('noCode') }}
@@ -201,7 +222,7 @@ async function verifyOtp() {
               {{ cooldown > 0 ? t('retryIn', { n: cooldown }) : t('resend') }}
             </button>
           </p>
-          <button class="btn secondary" @click="step = 'email'">{{ t('back') }}</button>
+          <button class="btn secondary" type="button" @click="step = 'email'">{{ t('back') }}</button>
         </template>
         <p v-if="message" class="login-msg" :class="{ error: /fail|incorrect|error|失败|错误/i.test(message) }">{{ message }}</p>
       </div>
