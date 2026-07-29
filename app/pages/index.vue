@@ -113,7 +113,8 @@ onBeforeUnmount(stopAuto)
               class="btn play"
               :to="`/drama/${current.drama_id}`"
             >
-              ? {{ t('play') }}
+              <span class="ico-play" aria-hidden="true" />
+              {{ t('play') }}
             </NuxtLink>
             <NuxtLink class="btn ghost" to="/categories">{{ t('categories') }}</NuxtLink>
           </div>
@@ -140,8 +141,12 @@ onBeforeUnmount(stopAuto)
         </div>
       </div>
 
-      <button v-if="(banners?.length || 0) > 1" class="hero-nav prev" @click="prev">?</button>
-      <button v-if="(banners?.length || 0) > 1" class="hero-nav next" @click="next">?</button>
+      <button v-if="(banners?.length || 0) > 1" class="hero-nav prev" aria-label="Previous" @click="prev">
+        <span class="ico-chevron left" aria-hidden="true" />
+      </button>
+      <button v-if="(banners?.length || 0) > 1" class="hero-nav next" aria-label="Next" @click="next">
+        <span class="ico-chevron right" aria-hidden="true" />
+      </button>
       <div v-if="(banners?.length || 0) > 1" class="hero-dots">
         <button
           v-for="(b, i) in banners"
@@ -158,7 +163,7 @@ onBeforeUnmount(stopAuto)
     <section v-for="section in sections" :key="section.id" class="rail-section page-width">
       <div class="section-head">
         <h2>{{ section.title }}</h2>
-        <NuxtLink class="view-all" to="/categories">{{ t('viewAll') }} ?</NuxtLink>
+        <NuxtLink class="view-all" to="/categories">{{ t('viewAll') }} <span class="ico-chevron right sm" aria-hidden="true" /></NuxtLink>
       </div>
       <div class="rail">
         <NuxtLink
