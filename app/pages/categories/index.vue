@@ -1,15 +1,15 @@
 <script setup lang="ts">
 const client = useSupabaseClient()
-const { t } = useI18n()
+const { t, locale } = useI18n()
 const q = ref('')
 
-const { data: dramas, refresh, pending } = await useAsyncData('cat-dramas', async () => {
-  let query = client.from('dramas').select('*').eq('status', 'published').order('updated_at', { ascending: false })
-  if (q.value.trim()) query = query.ilike('title', `%${q.value.trim()}%`)
-  const { data, error } = await query
-  if (error) throw error
-  return data || []
-}, { server: false, default: () => [] })
+const { data: dramas, refresh, pending } = await useAsyncData(
+  () => `cat-dramas-${locale.value}-${q.value}`,
+  () => fetchPublishedDramasByLocale(client, locale.value, { search: q.value }),
+  { server: false, default: () => [], watch: [locale] },
+)
+
+watch(locale, () => { refresh() })
 </script>
 
 <template>
@@ -20,6 +20,7 @@ const { data: dramas, refresh, pending } = await useAsyncData('cat-dramas', asyn
       <button class="btn" @click="refresh()">{{ t('search') }}</button>
     </div>
     <p v-if="pending" class="muted">Loading...</p>
+    <p v-else-if="!dramas?.length" class="muted">{{ t('noContentForLocale') }}</p>
     <div class="rail" style="grid-auto-columns: minmax(120px,180px);">
       <NuxtLink v-for="d in dramas" :key="d.id" :to="`/drama/${d.id}`">
         <div class="poster" :style="d.cover_url ? { backgroundImage: `url(${d.cover_url})` } : {}" />
@@ -28,4 +29,3 @@ const { data: dramas, refresh, pending } = await useAsyncData('cat-dramas', asyn
     </div>
   </div>
 </template>
-

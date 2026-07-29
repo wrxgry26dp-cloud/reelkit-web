@@ -36,6 +36,9 @@ const messages: Record<LocaleCode, Record<string, string>> = {
     language: 'Language',
     noVideo: 'No video for this language',
     personalCenter: 'Personal Center',
+    newRelease: 'New Release',
+    top: 'TOP',
+    noContentForLocale: 'No titles for this language yet.',
   },
   fr: {
     home: 'Accueil',
@@ -64,6 +67,9 @@ const messages: Record<LocaleCode, Record<string, string>> = {
     language: 'Langue',
     noVideo: 'Pas de vidéo pour cette langue',
     personalCenter: 'Espace personnel',
+    newRelease: 'Nouveautés',
+    top: 'TOP',
+    noContentForLocale: 'Aucun titre pour cette langue pour le moment.',
   },
   pt: {
     home: 'Início',
@@ -92,6 +98,9 @@ const messages: Record<LocaleCode, Record<string, string>> = {
     language: 'Idioma',
     noVideo: 'Sem vídeo neste idioma',
     personalCenter: 'Central pessoal',
+    newRelease: 'Novidades',
+    top: 'TOP',
+    noContentForLocale: 'Ainda não há títulos neste idioma.',
   },
   ja: {
     home: 'ホーム',
@@ -120,6 +129,9 @@ const messages: Record<LocaleCode, Record<string, string>> = {
     language: '言語',
     noVideo: 'この言語の動画がありません',
     personalCenter: 'マイページ',
+    newRelease: '新着',
+    top: 'TOP',
+    noContentForLocale: 'この言語の作品はまだありません。',
   },
   es: {
     home: 'Inicio',
@@ -148,6 +160,9 @@ const messages: Record<LocaleCode, Record<string, string>> = {
     language: 'Idioma',
     noVideo: 'No hay video en este idioma',
     personalCenter: 'Centro personal',
+    newRelease: 'Novedades',
+    top: 'TOP',
+    noContentForLocale: 'Todavía no hay títulos en este idioma.',
   },
 }
 
@@ -164,7 +179,14 @@ export function useI18n() {
 
   function setLocale(code: LocaleCode) {
     locale.value = code
-    if (import.meta.client) localStorage.setItem('reelkit_locale', code)
+    if (import.meta.client) {
+      localStorage.setItem('reelkit_locale', code)
+      document.documentElement.lang = code
+    }
+  }
+
+  if (import.meta.client) {
+    document.documentElement.lang = locale.value
   }
 
   return { locale, t, setLocale, LOCALES }

@@ -1,52 +1,26 @@
 <script setup lang="ts">
 const client = useSupabaseClient()
-const { t } = useI18n()
+const { t, locale } = useI18n()
 
 const slide = ref(0)
 let timer: ReturnType<typeof setInterval> | null = null
 
-const { data: banners, pending: bannersPending } = await useAsyncData('home-banners', async () => {
-  const { data, error } = await client
-    .from('banners')
-    .select('id,title,image_url,drama_id,sort_order, drama:dramas(id,title,synopsis,cover_url,status)')
-    .eq('is_active', true)
-    .order('sort_order')
-  if (error) throw error
-  return (data || []).filter((b: any) => !b.drama || b.drama.status === 'published')
-}, { server: false, default: () => [] })
+const { data: banners, pending: bannersPending, refresh: refreshBanners } = await useAsyncData(
+  () => `home-banners-${locale.value}`,
+  () => fetchHomeBannersByLocale(client, locale.value),
+  { server: false, default: () => [], watch: [locale] },
+)
 
-const { data: sections, pending: sectionsPending } = await useAsyncData('home-sections', async () => {
-  const { data: secs, error } = await client
-    .from('home_sections')
-    .select('*')
-    .eq('is_active', true)
-    .order('sort_order')
-  if (error) throw error
+const { data: sections, pending: sectionsPending, refresh: refreshSections } = await useAsyncData(
+  () => `home-sections-${locale.value}`,
+  () => fetchHomeSectionsByLocale(client, locale.value),
+  { server: false, default: () => [], watch: [locale] },
+)
 
-  const result = []
-  for (const section of secs || []) {
-    const { data: items } = await client
-      .from('home_section_items')
-      .select('sort_order, drama:dramas(*)')
-      .eq('section_id', section.id)
-      .order('sort_order')
-    const dramas = (items || [])
-      .map((i: any) => i.drama)
-      .filter((d: any) => d && d.status === 'published')
-    if (dramas.length) result.push({ ...section, dramas })
-  }
-
-  if (!result.length) {
-    const { data: all } = await client
-      .from('dramas')
-      .select('*')
-      .eq('status', 'published')
-      .order('updated_at', { ascending: false })
-      .limit(24)
-    if (all?.length) result.push({ id: 'all', title: 'New Release', slug: 'new-release', dramas: all })
-  }
-  return result
-}, { server: false, default: () => [] })
+watch(locale, () => {
+  refreshBanners()
+  refreshSections()
+})
 
 const pending = computed(() => bannersPending.value || sectionsPending.value)
 const current = computed(() => banners.value?.[slide.value] || null)
@@ -64,6 +38,11 @@ const heroImage = computed(() => {
     || currentDrama.value?.cover_url
     || ''
 })
+
+function localizedSectionTitle(section: any) {
+  const key = sectionTitleKey(section?.slug)
+  return key ? t(key) : section?.title
+}
 
 function next() {
   const n = banners.value?.length || 0
@@ -87,6 +66,7 @@ function stopAuto() {
 watch(banners, (list) => {
   slide.value = 0
   if (list?.length) startAuto()
+  else stopAuto()
 }, { immediate: true })
 onBeforeUnmount(stopAuto)
 </script>
@@ -159,10 +139,13 @@ onBeforeUnmount(stopAuto)
     </section>
 
     <div v-if="pending" class="page-width muted load-tip">Loading...</div>
+    <div v-else-if="!sections?.length && !banners?.length" class="page-width muted load-tip">
+      {{ t('noContentForLocale') }}
+    </div>
 
     <section v-for="section in sections" :key="section.id" class="rail-section page-width">
       <div class="section-head">
-        <h2>{{ section.title }}</h2>
+        <h2>{{ localizedSectionTitle(section) }}</h2>
         <NuxtLink class="view-all" to="/categories">{{ t('viewAll') }} <span class="ico-chevron right sm" aria-hidden="true" /></NuxtLink>
       </div>
       <div class="rail">
