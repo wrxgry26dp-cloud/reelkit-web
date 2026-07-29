@@ -39,6 +39,14 @@ const messages: Record<LocaleCode, Record<string, string>> = {
     newRelease: 'New Release',
     top: 'TOP',
     noContentForLocale: 'No titles for this language yet.',
+    otpSent: 'Code sent. Check your inbox.',
+    otpHint: 'Open the ReelKit email and enter the security code sent to',
+    securityCode: 'Security code',
+    noCode: "Didn't receive the code?",
+    resend: 'Resend',
+    retryIn: 'Retry in {n}s',
+    incorrectCode: 'Incorrect code',
+    back: 'Back',
   },
   fr: {
     home: 'Accueil',
@@ -70,6 +78,14 @@ const messages: Record<LocaleCode, Record<string, string>> = {
     newRelease: 'Nouveautés',
     top: 'TOP',
     noContentForLocale: 'Aucun titre pour cette langue pour le moment.',
+    otpSent: 'Code envoyé. Vérifiez votre boîte mail.',
+    otpHint: 'Ouvrez l’e-mail ReelKit et saisissez le code envoyé à',
+    securityCode: 'Code de sécurité',
+    noCode: 'Vous n’avez pas reçu le code ?',
+    resend: 'Renvoyer',
+    retryIn: 'Réessayer dans {n}s',
+    incorrectCode: 'Code incorrect',
+    back: 'Retour',
   },
   pt: {
     home: 'Início',
@@ -101,6 +117,14 @@ const messages: Record<LocaleCode, Record<string, string>> = {
     newRelease: 'Novidades',
     top: 'TOP',
     noContentForLocale: 'Ainda não há títulos neste idioma.',
+    otpSent: 'Código enviado. Verifique seu e-mail.',
+    otpHint: 'Abra o e-mail da ReelKit e digite o código enviado para',
+    securityCode: 'Código de segurança',
+    noCode: 'Não recebeu o código?',
+    resend: 'Reenviar',
+    retryIn: 'Tentar de novo em {n}s',
+    incorrectCode: 'Código incorreto',
+    back: 'Voltar',
   },
   ja: {
     home: 'ホーム',
@@ -132,6 +156,14 @@ const messages: Record<LocaleCode, Record<string, string>> = {
     newRelease: '新着',
     top: 'TOP',
     noContentForLocale: 'この言語の作品はまだありません。',
+    otpSent: 'コードを送信しました。メールを確認してください。',
+    otpHint: 'ReelKit のメールを開き、次の宛先に届いた認証コードを入力してください：',
+    securityCode: '認証コード',
+    noCode: 'コードが届きませんか？',
+    resend: '再送信',
+    retryIn: '{n}秒後に再試行',
+    incorrectCode: 'コードが正しくありません',
+    back: '戻る',
   },
   es: {
     home: 'Inicio',
@@ -163,6 +195,14 @@ const messages: Record<LocaleCode, Record<string, string>> = {
     newRelease: 'Novedades',
     top: 'TOP',
     noContentForLocale: 'Todavía no hay títulos en este idioma.',
+    otpSent: 'Código enviado. Revisa tu correo.',
+    otpHint: 'Abre el correo de ReelKit e introduce el código enviado a',
+    securityCode: 'Código de seguridad',
+    noCode: '¿No recibiste el código?',
+    resend: 'Reenviar',
+    retryIn: 'Reintentar en {n}s',
+    incorrectCode: 'Código incorrecto',
+    back: 'Atrás',
   },
 }
 
@@ -175,7 +215,15 @@ export function useI18n() {
     return 'en'
   })
 
-  const t = (key: string) => messages[locale.value]?.[key] || messages.en[key] || key
+  const t = (key: string, vars?: Record<string, string | number>) => {
+    let text = messages[locale.value]?.[key] || messages.en[key] || key
+    if (vars) {
+      for (const [k, v] of Object.entries(vars)) {
+        text = text.replace(new RegExp(`\\{${k}\\}`, 'g'), String(v))
+      }
+    }
+    return text
+  }
 
   function setLocale(code: LocaleCode) {
     locale.value = code

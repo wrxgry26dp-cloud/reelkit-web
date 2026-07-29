@@ -4,24 +4,66 @@ const { t } = useI18n()
 const { open, hideLogin, redirect } = useLoginModal()
 const step = ref<'menu' | 'email' | 'otp'>('menu')
 const email = ref('')
-const otp = ref('')
 const loading = ref(false)
 const message = ref('')
 const clientSource = 'pc'
+
+// Same as shopping-web: Auth email {{ .Token }} is 8 digits on this project
+const OTP_LENGTH = 8
+const digits = ref(Array.from({ length: OTP_LENGTH }, () => ''))
+const inputRefs = ref<Array<HTMLInputElement | null>>([])
+const cooldown = ref(0)
+let timer: ReturnType<typeof setInterval> | null = null
+
+const codeComplete = computed(() => digits.value.every(d => d.length === 1))
+const token = computed(() => digits.value.join(''))
 
 watch(open, (v) => {
   if (v) {
     step.value = 'menu'
     message.value = ''
+    email.value = ''
+    resetDigits()
+    stopCooldown()
   }
 })
 
-async function sendOtp() {
+onBeforeUnmount(stopCooldown)
+
+function setInputRef(el: Element | ComponentPublicInstance | null, index: number) {
+  inputRefs.value[index] = el as HTMLInputElement | null
+}
+
+function resetDigits() {
+  digits.value = Array.from({ length: OTP_LENGTH }, () => '')
+}
+
+function startCooldown() {
+  cooldown.value = 30
+  if (timer) clearInterval(timer)
+  timer = setInterval(() => {
+    cooldown.value -= 1
+    if (cooldown.value <= 0) stopCooldown()
+  }, 1000)
+}
+
+function stopCooldown() {
+  if (timer) {
+    clearInterval(timer)
+    timer = null
+  }
+  cooldown.value = 0
+}
+
+async function sendOtp(isResend = false) {
+  if (loading.value) return
+  if (isResend && cooldown.value > 0) return
   loading.value = true
   message.value = ''
   const { error } = await client.auth.signInWithOtp({
     email: email.value.trim(),
     options: {
+      shouldCreateUser: true,
       data: { client_source: clientSource, is_customer: true },
     },
   })
@@ -31,22 +73,51 @@ async function sendOtp() {
     return
   }
   step.value = 'otp'
-  message.value = 'OTP sent'
+  resetDigits()
+  startCooldown()
+  message.value = t('otpSent')
+  await nextTick()
+  inputRefs.value[0]?.focus()
+}
+
+function onInput(index: number) {
+  const value = digits.value[index].replace(/\D/g, '').slice(-1)
+  digits.value[index] = value
+  message.value = ''
+  if (value && index < digits.value.length - 1) {
+    inputRefs.value[index + 1]?.focus()
+  }
+  if (codeComplete.value) verifyOtp()
+}
+
+function onKeydown(event: KeyboardEvent, index: number) {
+  if (event.key === 'Backspace' && !digits.value[index] && index > 0) {
+    inputRefs.value[index - 1]?.focus()
+  }
+}
+
+function onPaste(event: ClipboardEvent) {
+  const text = event.clipboardData?.getData('text')?.replace(/\D/g, '').slice(0, OTP_LENGTH) || ''
+  if (!text) return
+  digits.value = Array.from({ length: OTP_LENGTH }, (_, i) => text[i] || '')
+  if (codeComplete.value) verifyOtp()
 }
 
 async function verifyOtp() {
+  if (!codeComplete.value || loading.value) return
   loading.value = true
+  message.value = ''
   const { error } = await client.auth.verifyOtp({
     email: email.value.trim(),
-    token: otp.value.trim(),
+    token: token.value,
     type: 'email',
   })
-  loading.value = false
   if (error) {
-    message.value = error.message
+    loading.value = false
+    message.value = t('incorrectCode')
     return
   }
-  // ensure client_source for existing users
+  await client.auth.getSession()
   const user = useSupabaseUser()
   if (user.value) {
     await client.from('profiles').update({
@@ -54,6 +125,7 @@ async function verifyOtp() {
       is_customer: true,
     }).eq('id', user.value.id).is('client_source', null)
   }
+  loading.value = false
   hideLogin()
   await navigateTo(redirect.value || '/')
 }
@@ -80,20 +152,53 @@ async function verifyOtp() {
           <button class="social" disabled>Apple</button>
           <button class="social" disabled>TikTok</button>
           <div class="divider"><span>{{ t('or') }}</span></div>
-          <button class="btn" @click="step = 'email'">✉ {{ t('emailLogin') }}</button>
+          <button class="btn" @click="step = 'email'">{{ t('emailLogin') }}</button>
           <p class="muted" style="font-size:12px;">{{ t('continueAgree') }}</p>
         </template>
 
         <template v-else-if="step === 'email'">
-          <input v-model="email" class="input" type="email" placeholder="Email" @keyup.enter="sendOtp">
-          <button class="btn" :disabled="loading || !email" @click="sendOtp">{{ t('sendCode') }}</button>
-          <button class="btn secondary" @click="step = 'menu'">←</button>
+          <input v-model="email" class="input" type="email" placeholder="Email" @keyup.enter="sendOtp(false)">
+          <button class="btn" :disabled="loading || !email" @click="sendOtp(false)">
+            {{ loading ? '...' : t('sendCode') }}
+          </button>
+          <button class="btn secondary" @click="step = 'menu'">{{ t('back') }}</button>
         </template>
 
         <template v-else>
-          <input v-model="otp" class="input" placeholder="OTP" @keyup.enter="verifyOtp">
-          <button class="btn" :disabled="loading || !otp" @click="verifyOtp">{{ t('verify') }}</button>
-          <button class="btn secondary" @click="step = 'email'">←</button>
+          <p class="muted" style="margin:0; font-size:13px; line-height:1.45;">
+            {{ t('otpHint') }} <strong>{{ email }}</strong>
+          </p>
+          <p class="muted" style="margin:0; font-size:12px;">{{ t('securityCode') }}</p>
+          <div class="otp-row" @paste.prevent="onPaste">
+            <input
+              v-for="(_, index) in digits"
+              :key="index"
+              :ref="(el) => setInputRef(el, index)"
+              v-model="digits[index]"
+              class="otp-box"
+              inputmode="numeric"
+              maxlength="1"
+              autocomplete="one-time-code"
+              :disabled="loading"
+              @input="onInput(index)"
+              @keydown="onKeydown($event, index)"
+            >
+          </div>
+          <button class="btn" :disabled="loading || !codeComplete" @click="verifyOtp">
+            {{ loading ? '...' : t('verify') }}
+          </button>
+          <p class="muted" style="margin:0; font-size:13px; text-align:center;">
+            {{ t('noCode') }}
+            <button
+              class="link-btn"
+              type="button"
+              :disabled="cooldown > 0 || loading"
+              @click="sendOtp(true)"
+            >
+              {{ cooldown > 0 ? t('retryIn', { n: cooldown }) : t('resend') }}
+            </button>
+          </p>
+          <button class="btn secondary" @click="step = 'email'">{{ t('back') }}</button>
         </template>
         <p v-if="message" class="muted">{{ message }}</p>
       </div>
