@@ -12,21 +12,26 @@ async function logout() {
 
 <template>
   <header class="topnav">
-    <div class="logo">R</div>
-    <NuxtLink to="/" :class="{ active: route.path === '/' }">{{ t('home') }}</NuxtLink>
-    <NuxtLink to="/categories" :class="{ active: route.path.startsWith('/categories') }">{{ t('categories') }}</NuxtLink>
-    <NuxtLink to="/profile" :class="{ active: route.path.startsWith('/profile') }">{{ t('profile') }}</NuxtLink>
+    <NuxtLink to="/" class="brand">
+      <span class="logo">R</span>
+      <strong>ReelKit</strong>
+    </NuxtLink>
+    <nav class="nav-links">
+      <NuxtLink to="/" :class="{ active: route.path === '/' }">{{ t('home') }}</NuxtLink>
+      <NuxtLink to="/categories" :class="{ active: route.path.startsWith('/categories') }">{{ t('categories') }}</NuxtLink>
+      <NuxtLink to="/profile" :class="{ active: route.path.startsWith('/profile') }">{{ t('profile') }}</NuxtLink>
+    </nav>
     <div class="spacer" />
-    <label class="muted" style="display:flex; gap:6px; align-items:center;">
+    <label class="lang muted">
       {{ t('language') }}
       <select class="select" :value="locale" @change="setLocale(($event.target as HTMLSelectElement).value as any)">
         <option v-for="l in LOCALES" :key="l.code" :value="l.code">{{ l.label }}</option>
       </select>
     </label>
     <template v-if="user">
-      <NuxtLink to="/profile">{{ t('personalCenter') }}</NuxtLink>
+      <NuxtLink class="avatar" to="/profile">{{ (user.email || 'U').slice(0, 1).toUpperCase() }}</NuxtLink>
       <button class="btn secondary" @click="logout">{{ t('signOut') }}</button>
     </template>
-    <button v-else class="btn secondary" @click="showLogin('/')">{{ t('signIn') }}</button>
+    <button v-else class="btn light signin" @click="showLogin('/')">{{ t('signIn') }}</button>
   </header>
 </template>

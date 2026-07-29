@@ -1,7 +1,6 @@
 <script setup lang="ts">
 const client = useSupabaseClient()
 const { t } = useI18n()
-const route = useRoute()
 
 const slide = ref(0)
 let timer: ReturnType<typeof setInterval> | null = null
@@ -37,16 +36,14 @@ const { data: sections, pending: sectionsPending } = await useAsyncData('home-se
     if (dramas.length) result.push({ ...section, dramas })
   }
 
-  // Fallback rail if sections empty: all published dramas
   if (!result.length) {
     const { data: all } = await client
       .from('dramas')
       .select('*')
       .eq('status', 'published')
       .order('updated_at', { ascending: false })
-    if (all?.length) {
-      result.push({ id: 'all', title: 'Recommended', slug: 'recommended', dramas: all })
-    }
+      .limit(24)
+    if (all?.length) result.push({ id: 'all', title: 'New Release', slug: 'new-release', dramas: all })
   }
   return result
 }, { server: false, default: () => [] })
@@ -54,113 +51,114 @@ const { data: sections, pending: sectionsPending } = await useAsyncData('home-se
 const pending = computed(() => bannersPending.value || sectionsPending.value)
 const current = computed(() => banners.value?.[slide.value] || null)
 const currentDrama = computed(() => (current.value as any)?.drama || null)
+const featured = computed(() => {
+  const fromBanners = (banners.value || [])
+    .map((b: any) => b.drama)
+    .filter(Boolean)
+  if (fromBanners.length) return fromBanners.slice(0, 6)
+  return (sections.value?.[0]?.dramas || []).slice(0, 6)
+})
+
+const heroImage = computed(() => {
+  return current.value?.image_url
+    || currentDrama.value?.cover_url
+    || ''
+})
 
 function next() {
   const n = banners.value?.length || 0
   if (n <= 1) return
   slide.value = (slide.value + 1) % n
 }
-
 function prev() {
   const n = banners.value?.length || 0
   if (n <= 1) return
   slide.value = (slide.value - 1 + n) % n
 }
-
-function go(i: number) {
-  slide.value = i
-}
-
+function go(i: number) { slide.value = i }
 function startAuto() {
   stopAuto()
-  timer = setInterval(next, 5000)
+  if ((banners.value?.length || 0) > 1) timer = setInterval(next, 5000)
 }
-
 function stopAuto() {
-  if (timer) {
-    clearInterval(timer)
-    timer = null
-  }
+  if (timer) { clearInterval(timer); timer = null }
 }
 
 watch(banners, (list) => {
   slide.value = 0
   if (list?.length) startAuto()
 }, { immediate: true })
-
 onBeforeUnmount(stopAuto)
-
-watch(() => route.fullPath, () => {
-  // keep header active feel when returning home
-})
 </script>
 
 <template>
   <div class="home">
-    <p class="guest-tip muted">{{ t('guestTip') }}</p>
+    <section class="hero-stage" @mouseenter="stopAuto" @mouseleave="startAuto">
+      <div
+        class="hero-bg"
+        :style="heroImage ? { backgroundImage: `url(${heroImage})` } : undefined"
+      />
+      <div class="hero-shade" />
 
-    <section
-      class="carousel"
-      @mouseenter="stopAuto"
-      @mouseleave="startAuto"
-    >
-      <div v-if="pending && !banners?.length" class="carousel-empty muted">Loading...</div>
-      <template v-else-if="current">
-        <div
-          class="carousel-bg"
-          :style="{
-            backgroundImage: `linear-gradient(90deg, rgba(0,0,0,.82) 0%, rgba(0,0,0,.35) 48%, rgba(0,0,0,.55) 100%), url(${current.image_url || currentDrama?.cover_url || ''})`,
-          }"
-        />
-        <div class="carousel-content">
-          <div class="carousel-copy">
-            <p class="carousel-kicker">Featured</p>
-            <h1 class="carousel-title">{{ currentDrama?.title || current.title }}</h1>
-            <p v-if="currentDrama?.synopsis" class="carousel-synopsis muted">
-              {{ currentDrama.synopsis }}
-            </p>
-            <div class="carousel-actions">
-              <NuxtLink
-                v-if="current.drama_id"
-                class="btn light"
-                :to="`/drama/${current.drama_id}`"
-              >
-                {{ t('play') }}
-              </NuxtLink>
-              <NuxtLink class="btn secondary" to="/categories">{{ t('categories') }}</NuxtLink>
-            </div>
+      <div class="hero-inner page-width">
+        <div class="hero-main">
+          <p class="hero-kicker">ReelKit Original</p>
+          <h1 class="hero-title">{{ currentDrama?.title || current?.title || 'ReelKit' }}</h1>
+          <p class="hero-synopsis">
+            {{ currentDrama?.synopsis || t('guestTip') }}
+          </p>
+          <div class="hero-actions">
+            <NuxtLink
+              v-if="current?.drama_id"
+              class="btn play"
+              :to="`/drama/${current.drama_id}`"
+            >
+              ? {{ t('play') }}
+            </NuxtLink>
+            <NuxtLink class="btn ghost" to="/categories">{{ t('categories') }}</NuxtLink>
           </div>
-          <div
-            v-if="currentDrama?.cover_url || current.image_url"
-            class="carousel-poster"
-            :style="{ backgroundImage: `url(${currentDrama?.cover_url || current.image_url})` }"
-          />
         </div>
-        <button v-if="(banners?.length || 0) > 1" class="carousel-nav prev" aria-label="Previous" @click="prev">?</button>
-        <button v-if="(banners?.length || 0) > 1" class="carousel-nav next" aria-label="Next" @click="next">?</button>
-        <div v-if="(banners?.length || 0) > 1" class="carousel-dots">
-          <button
-            v-for="(b, i) in banners"
-            :key="b.id"
-            class="dot"
-            :class="{ active: i === slide }"
-            :aria-label="`Slide ${i + 1}`"
-            @click="go(i)"
-          />
+
+        <div v-if="featured.length" class="featured-strip">
+          <NuxtLink
+            v-for="(d, i) in featured"
+            :key="d.id"
+            class="featured-item"
+            :class="{ active: current?.drama_id === d.id }"
+            :to="`/drama/${d.id}`"
+            @mouseenter="go(Math.min(i, (banners?.length || 1) - 1))"
+          >
+            <div
+              class="featured-thumb"
+              :style="d.cover_url ? { backgroundImage: `url(${d.cover_url})` } : undefined"
+            />
+            <div class="featured-meta">
+              <div class="featured-title">{{ d.title }}</div>
+              <div class="featured-ep">EP.1</div>
+            </div>
+          </NuxtLink>
         </div>
-      </template>
-      <div v-else class="carousel-empty">
-        <h1 class="carousel-title">ReelKit</h1>
-        <NuxtLink class="btn light" to="/categories">{{ t('categories') }}</NuxtLink>
+      </div>
+
+      <button v-if="(banners?.length || 0) > 1" class="hero-nav prev" @click="prev">?</button>
+      <button v-if="(banners?.length || 0) > 1" class="hero-nav next" @click="next">?</button>
+      <div v-if="(banners?.length || 0) > 1" class="hero-dots">
+        <button
+          v-for="(b, i) in banners"
+          :key="b.id"
+          class="dot"
+          :class="{ active: i === slide }"
+          @click="go(i)"
+        />
       </div>
     </section>
 
-    <p v-if="pending" class="muted" style="padding: 0 20px;">Loading...</p>
+    <div v-if="pending" class="page-width muted load-tip">Loading...</div>
 
-    <section v-for="section in sections" :key="section.id" class="section">
+    <section v-for="section in sections" :key="section.id" class="rail-section page-width">
       <div class="section-head">
         <h2>{{ section.title }}</h2>
-        <NuxtLink class="muted" to="/categories">{{ t('viewAll') }}</NuxtLink>
+        <NuxtLink class="view-all" to="/categories">{{ t('viewAll') }} ?</NuxtLink>
       </div>
       <div class="rail">
         <NuxtLink
@@ -171,10 +169,10 @@ watch(() => route.fullPath, () => {
         >
           <div
             class="poster"
-            :style="d.cover_url ? { backgroundImage: `url(${d.cover_url})` } : {}"
+            :style="d.cover_url ? { backgroundImage: `url(${d.cover_url})` } : undefined"
           >
             <span v-if="section.slug === 'top'" class="rank">{{ idx + 1 }}</span>
-            <span v-else-if="d.is_trending" class="tag">HOT</span>
+            <span v-else-if="d.is_trending" class="tag">Trending</span>
           </div>
           <div class="card-title">{{ d.title }}</div>
         </NuxtLink>
