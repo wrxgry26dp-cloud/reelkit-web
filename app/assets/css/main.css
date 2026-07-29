@@ -1,0 +1,36 @@
+:root {
+  --bg: #000;
+  --panel: #121212;
+  --text: #fff;
+  --muted: #b3b3b3;
+  --accent: #ee2737;
+  --pink: #ff4d8d;
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; background: var(--bg); color: var(--text); font-family: "Segoe UI", system-ui, sans-serif; }
+a { color: inherit; text-decoration: none; }
+.shell { min-height: 100vh; }
+.topnav { display: flex; align-items: center; gap: 20px; padding: 14px 24px; border-bottom: 1px solid #1f1f1f; position: sticky; top: 0; background: rgba(0,0,0,.9); z-index: 10; }
+.logo { width: 28px; height: 28px; border-radius: 6px; background: var(--accent); display: grid; place-items: center; font-weight: 800; }
+.topnav a.active { color: var(--pink); }
+.hero { position: relative; min-height: 420px; display: grid; place-items: end center; padding: 40px 24px 28px; background: radial-gradient(circle at 30% 20%, #3a1020, #000 60%); }
+.hero-title { font-size: clamp(28px, 5vw, 48px); font-weight: 800; margin: 0 0 16px; text-align: center; }
+.play-btn { display: inline-flex; align-items: center; gap: 8px; background: #fff; color: #000; border-radius: 999px; padding: 12px 28px; font-weight: 700; }
+.section { padding: 24px; }
+.section-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 12px; }
+.section-head h2 { margin: 0; font-size: 22px; }
+.rail { display: grid; grid-auto-flow: column; grid-auto-columns: 160px; gap: 12px; overflow-x: auto; padding-bottom: 8px; }
+.poster { aspect-ratio: 2 / 3; border-radius: 10px; background: #222 center/cover no-repeat; position: relative; }
+.poster .trending { position: absolute; top: 8px; left: 8px; background: var(--accent); color: #fff; font-size: 11px; padding: 2px 8px; border-radius: 999px; }
+.card-title { margin-top: 8px; font-size: 14px; line-height: 1.3; }
+.muted { color: var(--muted); }
+.container { max-width: 1100px; margin: 0 auto; padding: 24px; }
+.btn { display: inline-flex; align-items: center; justify-content: center; border: 0; border-radius: 8px; padding: 10px 14px; background: var(--accent); color: #fff; cursor: pointer; }
+.btn.secondary { background: #2a2a2a; }
+.input { width: 100%; background: #151515; border: 1px solid #2a2a2a; color: #fff; border-radius: 8px; padding: 10px 12px; }
+.stack { display: grid; gap: 12px; }
+.episode-list { display: grid; gap: 8px; }
+.episode-item { display: flex; justify-content: space-between; align-items: center; padding: 12px; border: 1px solid #222; border-radius: 10px; background: var(--panel); }
+.player-wrap { max-width: 420px; margin: 0 auto; background: #000; }
+.player-wrap video { width: 100%; max-height: 80vh; background: #000; }
