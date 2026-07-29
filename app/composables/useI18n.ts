@@ -47,6 +47,7 @@ const messages: Record<LocaleCode, Record<string, string>> = {
     retryIn: 'Retry in {n}s',
     incorrectCode: 'Incorrect code',
     back: 'Back',
+    sendEmailFailed: 'Failed to send email. Check Supabase SMTP (QQ auth code / smtp.qq.com) and try again.',
   },
   fr: {
     home: 'Accueil',
@@ -86,6 +87,7 @@ const messages: Record<LocaleCode, Record<string, string>> = {
     retryIn: 'Réessayer dans {n}s',
     incorrectCode: 'Code incorrect',
     back: 'Retour',
+    sendEmailFailed: 'Envoi de l’e-mail échoué. Vérifiez le SMTP Supabase (code QQ / smtp.qq.com) et réessayez.',
   },
   pt: {
     home: 'Início',
@@ -125,6 +127,7 @@ const messages: Record<LocaleCode, Record<string, string>> = {
     retryIn: 'Tentar de novo em {n}s',
     incorrectCode: 'Código incorreto',
     back: 'Voltar',
+    sendEmailFailed: 'Falha ao enviar o e-mail. Verifique o SMTP do Supabase (código QQ / smtp.qq.com) e tente de novo.',
   },
   ja: {
     home: 'ホーム',
@@ -164,6 +167,7 @@ const messages: Record<LocaleCode, Record<string, string>> = {
     retryIn: '{n}秒後に再試行',
     incorrectCode: 'コードが正しくありません',
     back: '戻る',
+    sendEmailFailed: 'メール送信に失敗しました。Supabase の SMTP（QQ 認証コード / smtp.qq.com）を確認して再試行してください。',
   },
   es: {
     home: 'Inicio',
@@ -203,6 +207,7 @@ const messages: Record<LocaleCode, Record<string, string>> = {
     retryIn: 'Reintentar en {n}s',
     incorrectCode: 'Código incorrecto',
     back: 'Atrás',
+    sendEmailFailed: 'No se pudo enviar el correo. Revisa el SMTP de Supabase (código QQ / smtp.qq.com) e inténtalo de nuevo.',
   },
 }
 

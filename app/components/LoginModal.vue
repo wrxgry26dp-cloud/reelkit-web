@@ -69,7 +69,10 @@ async function sendOtp(isResend = false) {
   })
   loading.value = false
   if (error) {
-    message.value = error.message
+    const raw = error.message || ''
+    message.value = /magic link email|sending.*email|smtp|535/i.test(raw)
+      ? t('sendEmailFailed')
+      : raw
     return
   }
   step.value = 'otp'
@@ -200,7 +203,7 @@ async function verifyOtp() {
           </p>
           <button class="btn secondary" @click="step = 'email'">{{ t('back') }}</button>
         </template>
-        <p v-if="message" class="muted">{{ message }}</p>
+        <p v-if="message" class="login-msg" :class="{ error: /fail|incorrect|error|失败|错误/i.test(message) }">{{ message }}</p>
       </div>
     </div>
   </div>
