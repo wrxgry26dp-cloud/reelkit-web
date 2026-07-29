@@ -3,7 +3,7 @@ const { t, locale, setLocale, LOCALES } = useI18n()
 const { showLogin } = useLoginModal()
 const user = useSupabaseUser()
 const client = useSupabaseClient()
-const source = 'pc'
+const route = useRoute()
 
 async function logout() {
   await client.auth.signOut()
@@ -13,9 +13,9 @@ async function logout() {
 <template>
   <header class="topnav">
     <div class="logo">R</div>
-    <NuxtLink to="/" class="active">{{ t('home') }}</NuxtLink>
-    <NuxtLink to="/categories">{{ t('categories') }}</NuxtLink>
-    <NuxtLink to="/profile">{{ t('profile') }}</NuxtLink>
+    <NuxtLink to="/" :class="{ active: route.path === '/' }">{{ t('home') }}</NuxtLink>
+    <NuxtLink to="/categories" :class="{ active: route.path.startsWith('/categories') }">{{ t('categories') }}</NuxtLink>
+    <NuxtLink to="/profile" :class="{ active: route.path.startsWith('/profile') }">{{ t('profile') }}</NuxtLink>
     <div class="spacer" />
     <label class="muted" style="display:flex; gap:6px; align-items:center;">
       {{ t('language') }}
