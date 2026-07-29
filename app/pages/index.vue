@@ -1,84 +1,50 @@
 <script setup lang="ts">
-import type { Banner, Drama, HomeSection } from '~/types/database.types'
-
-type SectionWithDramas = HomeSection & { dramas: Drama[] }
-
 const client = useSupabaseClient()
+const { t } = useI18n()
 
 const { data: banners } = await useAsyncData('banners', async () => {
-  const { data, error } = await client
-    .from('banners')
-    .select('*')
-    .eq('is_active', true)
-    .order('sort_order')
-  if (error) throw error
-  return data as Banner[]
+  const { data } = await client.from('banners').select('*').eq('is_active', true).order('sort_order')
+  return data || []
 })
 
-const { data: sections } = await useAsyncData('home-sections', async () => {
-  const { data: secs, error } = await client
-    .from('home_sections')
-    .select('*')
-    .eq('is_active', true)
-    .order('sort_order')
-  if (error) throw error
-
-  const result: SectionWithDramas[] = []
-  for (const section of (secs || []) as HomeSection[]) {
+const { data: sections } = await useAsyncData('sections', async () => {
+  const { data: secs } = await client.from('home_sections').select('*').eq('is_active', true).order('sort_order')
+  const result = []
+  for (const section of secs || []) {
     const { data: items } = await client
       .from('home_section_items')
       .select('sort_order, drama:dramas(*)')
       .eq('section_id', section.id)
       .order('sort_order')
-
-    const dramas = (items || [])
-      .map((item: any) => item.drama as Drama)
-      .filter((d: Drama | null) => d && d.status === 'published')
-
+    const dramas = (items || []).map((i: any) => i.drama).filter((d: any) => d && d.status === 'published')
     result.push({ ...section, dramas })
   }
   return result
 })
 
-const hero = computed(() => banners.value?.[0] || null)
+const hero = computed(() => banners.value?.[0])
 </script>
 
 <template>
-  <div class="shell">
-    <header class="topnav">
-      <div class="logo">R</div>
-      <NuxtLink to="/" class="active">Home</NuxtLink>
-      <NuxtLink to="/categories">Categories</NuxtLink>
-      <div style="flex:1" />
-      <NuxtLink to="/login">Sign in</NuxtLink>
-    </header>
-
+  <div>
+    <p class="muted" style="padding:8px 20px 0;">{{ t('guestTip') }}</p>
     <section class="hero">
       <div style="text-align:center;">
-        <h1 class="hero-title">{{ hero?.title || 'Every Second Is Drama' }}</h1>
-        <NuxtLink
-          v-if="hero?.drama_id"
-          class="play-btn"
-          :to="`/drama/${hero.drama_id}`"
-        >
-          ▶ Play
-        </NuxtLink>
-        <NuxtLink v-else class="play-btn" to="/categories">Browse</NuxtLink>
+        <h1 class="hero-title">{{ hero?.title || 'ReelKit' }}</h1>
+        <NuxtLink v-if="hero?.drama_id" class="btn light" :to="`/drama/${hero.drama_id}`">▶ {{ t('play') }}</NuxtLink>
+        <NuxtLink v-else class="btn light" to="/categories">{{ t('categories') }}</NuxtLink>
       </div>
     </section>
 
     <section v-for="section in sections" :key="section.id" class="section">
       <div class="section-head">
         <h2>{{ section.title }}</h2>
-        <span class="muted">View all</span>
+        <span class="muted">{{ t('viewAll') }}</span>
       </div>
       <div class="rail">
         <NuxtLink v-for="d in section.dramas" :key="d.id" :to="`/drama/${d.id}`">
-          <div
-            class="poster"
-            :style="d.cover_url ? { backgroundImage: `url(${d.cover_url})` } : {}"
-          >
-            <span v-if="d.is_trending" class="trending">Trending</span>
+          <div class="poster" :style="d.cover_url ? { backgroundImage: `url(${d.cover_url})` } : {}">
+            <span v-if="d.is_trending" class="tag">HOT</span>
           </div>
           <div class="card-title">{{ d.title }}</div>
         </NuxtLink>

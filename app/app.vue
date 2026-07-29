@@ -1,1 +1,7 @@
-<template><NuxtPage /></template>
+<template>
+  <div class="shell">
+    <AppHeader />
+    <slot />
+    <LoginModal />
+  </div>
+</template>
