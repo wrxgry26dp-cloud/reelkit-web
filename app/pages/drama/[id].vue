@@ -4,23 +4,24 @@ const client = useSupabaseClient()
 const { t } = useI18n()
 const id = computed(() => String(route.params.id))
 
-const { data: drama } = await useAsyncData(`drama-${id.value}`, async () => {
+const { data: drama, pending } = await useAsyncData(`drama-${id.value}`, async () => {
   const { data, error } = await client.from('dramas').select('*').eq('id', id.value).single()
   if (error) throw error
   return data
-})
+}, { server: false, default: () => null })
 
 const { data: episodes } = await useAsyncData(`eps-${id.value}`, async () => {
   const { data, error } = await client.from('episodes').select('*').eq('drama_id', id.value).order('episode_number')
   if (error) throw error
   return data || []
-})
+}, { server: false, default: () => [] })
 
 const first = computed(() => episodes.value?.[0])
 </script>
 
 <template>
   <div class="container stack">
+    <p v-if="pending" class="muted">Loading...</p>
     <div style="display:flex; gap:20px; flex-wrap:wrap;">
       <div class="poster" style="width:min(200px,45vw);" :style="drama?.cover_url ? { backgroundImage: `url(${drama.cover_url})` } : {}" />
       <div class="stack" style="flex:1; min-width:220px;">

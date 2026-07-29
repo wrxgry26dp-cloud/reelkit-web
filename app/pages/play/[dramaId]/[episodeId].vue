@@ -12,7 +12,7 @@ const { data: drama } = await useAsyncData(`pd-${dramaId.value}`, async () => {
   const { data, error } = await client.from('dramas').select('*').eq('id', dramaId.value).single()
   if (error) throw error
   return data
-})
+}, { server: false, default: () => null })
 
 const { data: episode } = await useAsyncData(
   () => `pe-${episodeId.value}`,
@@ -21,12 +21,13 @@ const { data: episode } = await useAsyncData(
     if (error) throw error
     return data
   },
+  { server: false, default: () => null },
 )
 
 const { data: episodes } = await useAsyncData(`pl-${dramaId.value}`, async () => {
   const { data } = await client.from('episodes').select('*').eq('drama_id', dramaId.value).order('episode_number')
   return data || []
-})
+}, { server: false, default: () => [] })
 
 const { data: videos } = await useAsyncData(
   () => `pv-${episodeId.value}`,
@@ -34,6 +35,7 @@ const { data: videos } = await useAsyncData(
     const { data } = await client.from('episode_videos').select('*').eq('episode_id', episodeId.value)
     return data || []
   },
+  { server: false, default: () => [] },
 )
 
 const unlockedIds = ref<Set<string>>(new Set())

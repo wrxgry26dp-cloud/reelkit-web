@@ -3,11 +3,12 @@ const client = useSupabaseClient()
 const { t } = useI18n()
 
 const { data: banners } = await useAsyncData('banners', async () => {
-  const { data } = await client.from('banners').select('*').eq('is_active', true).order('sort_order')
+  const { data, error } = await client.from('banners').select('*').eq('is_active', true).order('sort_order')
+  if (error) throw error
   return data || []
-})
+}, { server: false, default: () => [] })
 
-const { data: sections } = await useAsyncData('sections', async () => {
+const { data: sections, pending } = await useAsyncData('sections', async () => {
   const { data: secs } = await client.from('home_sections').select('*').eq('is_active', true).order('sort_order')
   const result = []
   for (const section of secs || []) {
@@ -20,7 +21,7 @@ const { data: sections } = await useAsyncData('sections', async () => {
     result.push({ ...section, dramas })
   }
   return result
-})
+}, { server: false, default: () => [] })
 
 const hero = computed(() => banners.value?.[0])
 </script>
@@ -31,11 +32,12 @@ const hero = computed(() => banners.value?.[0])
     <section class="hero">
       <div style="text-align:center;">
         <h1 class="hero-title">{{ hero?.title || 'ReelKit' }}</h1>
-        <NuxtLink v-if="hero?.drama_id" class="btn light" :to="`/drama/${hero.drama_id}`">▶ {{ t('play') }}</NuxtLink>
+        <NuxtLink v-if="hero?.drama_id" class="btn light" :to="`/drama/${hero.drama_id}`">{{ t('play') }}</NuxtLink>
         <NuxtLink v-else class="btn light" to="/categories">{{ t('categories') }}</NuxtLink>
       </div>
     </section>
 
+    <p v-if="pending" class="muted" style="padding:0 20px;">Loading...</p>
     <section v-for="section in sections" :key="section.id" class="section">
       <div class="section-head">
         <h2>{{ section.title }}</h2>
@@ -52,3 +54,4 @@ const hero = computed(() => banners.value?.[0])
     </section>
   </div>
 </template>
+
