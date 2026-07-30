@@ -1,7 +1,10 @@
 <script setup lang="ts">
 const route = useRoute()
 const client = useSupabaseClient()
+const user = useSupabaseUser()
 const { t } = useI18n()
+const { showLogin } = useLoginModal()
+const { isFavorited, toggleFavorite } = useFavorites()
 const id = computed(() => String(route.params.id))
 
 const { data: drama, pending } = await useAsyncData(`drama-${id.value}`, async () => {
@@ -17,6 +20,15 @@ const { data: episodes } = await useAsyncData(`eps-${id.value}`, async () => {
 }, { server: false, default: () => [] })
 
 const first = computed(() => episodes.value?.[0])
+const saved = computed(() => (drama.value?.id ? isFavorited(drama.value.id) : false))
+
+function onToggleFavorite() {
+  if (!user.value) {
+    showLogin(route.fullPath)
+    return
+  }
+  if (drama.value?.id) toggleFavorite(drama.value.id)
+}
 </script>
 
 <template>
@@ -27,7 +39,12 @@ const first = computed(() => episodes.value?.[0])
       <div class="stack" style="flex:1; min-width:220px;">
         <h1 style="margin:0;">{{ drama?.title }}</h1>
         <p class="muted">{{ drama?.synopsis }}</p>
-        <NuxtLink v-if="first" class="btn" :to="`/play/${drama?.id}/${first.id}`">{{ t('play') }} EP1</NuxtLink>
+        <div style="display:flex; gap:10px; flex-wrap:wrap;">
+          <NuxtLink v-if="first" class="btn" :to="`/play/${drama?.id}/${first.id}`">{{ t('play') }} EP1</NuxtLink>
+          <button class="btn secondary" type="button" @click="onToggleFavorite">
+            {{ saved ? t('removeFavorite') : t('addFavorite') }}
+          </button>
+        </div>
       </div>
     </div>
     <h2>{{ t('episodes') }}</h2>

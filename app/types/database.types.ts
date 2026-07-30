@@ -169,28 +169,43 @@ export type Database = {
       }
       profiles: {
         Row: {
+          client_source: string | null
+          coin_balance: number
           created_at: string
           display_name: string | null
           email: string | null
           id: string
+          is_customer: boolean
           role: string
+          status: string
           updated_at: string
+          username: string | null
         }
         Insert: {
+          client_source?: string | null
+          coin_balance?: number
           created_at?: string
           display_name?: string | null
           email?: string | null
           id: string
+          is_customer?: boolean
           role?: string
+          status?: string
           updated_at?: string
+          username?: string | null
         }
         Update: {
+          client_source?: string | null
+          coin_balance?: number
           created_at?: string
           display_name?: string | null
           email?: string | null
           id?: string
+          is_customer?: boolean
           role?: string
+          status?: string
           updated_at?: string
+          username?: string | null
         }
       }
       site_pages: {

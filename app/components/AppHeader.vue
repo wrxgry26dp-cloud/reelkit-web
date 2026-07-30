@@ -19,6 +19,7 @@ async function logout() {
     <nav class="nav-links">
       <NuxtLink to="/" :class="{ active: route.path === '/' }">{{ t('home') }}</NuxtLink>
       <NuxtLink to="/categories" :class="{ active: route.path.startsWith('/categories') }">{{ t('categories') }}</NuxtLink>
+      <NuxtLink to="/docs" :class="{ active: route.path.startsWith('/docs') }">API</NuxtLink>
       <NuxtLink to="/profile" :class="{ active: route.path.startsWith('/profile') }">{{ t('profile') }}</NuxtLink>
     </nav>
     <div class="spacer" />

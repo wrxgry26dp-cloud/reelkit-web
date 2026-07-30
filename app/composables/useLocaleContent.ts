@@ -31,6 +31,37 @@ export async function fetchPublishedDramasByLocale(
   return data || []
 }
 
+/** Paginated dramas for categories page. */
+export async function fetchPublishedDramasPage(
+  client: any,
+  locale: LocaleCode,
+  opts?: { search?: string; page?: number; pageSize?: number },
+) {
+  const page = Math.max(1, opts?.page ?? 1)
+  const pageSize = Math.max(1, opts?.pageSize ?? 14)
+  const from = (page - 1) * pageSize
+  const to = from + pageSize - 1
+
+  let query = client
+    .from('dramas')
+    .select('*', { count: 'exact' })
+    .eq('status', 'published')
+    .eq('primary_locale', locale)
+    .order('updated_at', { ascending: false })
+    .range(from, to)
+
+  if (opts?.search?.trim()) query = query.ilike('title', `%${opts.search.trim()}%`)
+
+  const { data, error, count } = await query
+  if (error) throw error
+  return {
+    items: data || [],
+    total: count ?? 0,
+    page,
+    pageSize,
+  }
+}
+
 /** Banners for locale; if none, synthesize from locale dramas. */
 export async function fetchHomeBannersByLocale(client: any, locale: LocaleCode) {
   const { data, error } = await client
